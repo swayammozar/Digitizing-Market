@@ -1,26 +1,270 @@
 @import "tailwindcss";
 
+/* ---------------------------------------------------------------------------
+   Digitizing Market — a working macOS desktop.
+
+   Two colour systems live here on purpose:
+
+   OS chrome borrows Apple's, because the illusion only holds if selection,
+   focus and controls behave the way macOS does. Anything commercial — price,
+   buy, thread swatches — uses colours lifted from the wallpaper itself: the
+   cyan ground, the katakana yellow, and the vermilion of the hanko stamp in
+   its top-right corner. That split keeps the desktop believable while giving
+   the shop its own voice inside it.
+--------------------------------------------------------------------------- */
+
+@theme {
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI",
+    system-ui, sans-serif;
+
+  /* From the wallpaper */
+  --color-ground: #45aec8;
+  --color-hanko: #c0392b;
+  --color-katakana: #e5c232;
+  --color-ink: #141414;
+  --color-paper: #e9e3d6;
+
+  /* macOS system */
+  --color-system-blue: #0a84ff;
+  --color-system-red: #ff5f57;
+  --color-system-amber: #febc2e;
+  --color-system-green: #28c840;
+
+  /* Concentric radii — an inner corner is always the outer minus its inset */
+  --radius-window: 12px;
+  --radius-panel: 10px;
+  --radius-tile: 9px;
+  --radius-dock: 22px;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Apple's material hierarchy: thicker material = less of the wallpaper
+     survives it. Each step raises opacity and blur together. */
+  --glass-thin-bg: rgba(255, 255, 255, 0.14);
+  --glass-thin-blur: 20px;
+
+  --glass-regular-bg: rgba(255, 255, 255, 0.26);
+  --glass-regular-blur: 32px;
+
+  --glass-thick-bg: rgba(246, 248, 250, 0.72);
+  --glass-thick-blur: 48px;
+
+  --glass-border: rgba(255, 255, 255, 0.22);
+  --glass-shadow: 0 10px 40px rgba(0, 0, 0, 0.28), 0 2px 8px rgba(0, 0, 0, 0.16);
+  --glass-shadow-focused: 0 24px 70px rgba(0, 0, 0, 0.38),
+    0 4px 14px rgba(0, 0, 0, 0.22);
+
+  --label: #f2f4f6;
+  --label-secondary: rgba(242, 244, 246, 0.66);
+  --label-on-panel: #1c1c1e;
+  --label-on-panel-secondary: rgba(28, 28, 30, 0.6);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+/* ---------------------------------------------------------------------------
+   Everything below is written into @layer base or @layer components.
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+   This is not cosmetic. Tailwind v4 puts its utilities in @layer utilities,
+   and unlayered CSS outranks every layer — so a bare `.glass { position:
+   relative }` silently beats `class="absolute"` on the same element. That
+   turned every window into a static block in normal flow, stacking them down
+   the page instead of positioning them. Component styles must sit in a layer
+   below utilities so a utility can always override them.
+--------------------------------------------------------------------------- */
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html,
+  body {
+    height: 100%;
+    overflow: hidden; /* it is a desktop, not a page */
+  }
+
+  body {
+    font-family: var(--font-sans);
+    color: var(--label);
+    background: #2b6d80; /* wallpaper average, so nothing flashes white on load */
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Keyboard focus must stay visible on glass, where a default outline vanishes. */
+  :focus-visible {
+    outline: 2px solid var(--color-system-blue);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+
+/* Numbers in spec tables must line up column-to-column. */
+.tabular {
+  font-variant-numeric: tabular-nums;
 }
+
+/* ---------------------------------------------------------------------------
+   Liquid Glass
+
+   Three things separate this from a plain blurred panel:
+   1. saturate() — glass concentrates the colour behind it rather than washing
+      it out, which is what makes it read as a lens instead of frosted plastic.
+   2. A gradient rim, brightest where a light source would strike it, that
+      fades around the shape. This is the specular highlight.
+   3. An inner top highlight, so the surface has thickness.
+--------------------------------------------------------------------------- */
+
+/* Author `backdrop-filter` unprefixed only. Lightning CSS adds the -webkit-
+   prefix itself from the browser targets, and if both are written by hand it
+   collapses them to the prefixed one alone — which Chrome ignores, silently
+   turning every glass surface into flat translucent paint. */
+.glass {
+  position: relative;
+  background: var(--glass-regular-bg);
+  backdrop-filter: blur(var(--glass-regular-blur)) saturate(180%);
+  box-shadow:
+    var(--glass-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    140deg,
+    rgba(255, 255, 255, 0.75),
+    rgba(255, 255, 255, 0.08) 28%,
+    rgba(255, 255, 255, 0) 58%,
+    rgba(255, 255, 255, 0.42)
+  );
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.glass-thin {
+  background: var(--glass-thin-bg);
+  backdrop-filter: blur(var(--glass-thin-blur)) saturate(160%);
+}
+
+.glass-thick {
+  background: var(--glass-thick-bg);
+  backdrop-filter: blur(var(--glass-thick-blur)) saturate(190%);
+  color: var(--label-on-panel);
+}
+
+/* macOS gives desktop labels a shadow rather than a plate behind them. */
+.desktop-label {
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.55),
+    0 0 1px rgba(0, 0, 0, 0.4);
+}
+
+/* The one embroidery motif in the interface: a running stitch, used as the
+   divider inside product windows. */
+.stitch-rule {
+  height: 1px;
+  background-image: linear-gradient(
+    90deg,
+    currentColor 0 6px,
+    transparent 6px 11px
+  );
+  opacity: 0.22;
+}
+
+/* ---------------------------------------------------------------------------
+   Motion
+--------------------------------------------------------------------------- */
+
+@keyframes icon-settle {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes window-open {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-icon-settle {
+  animation: icon-settle 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-window-open {
+  animation: window-open 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Form controls, styled like AppKit's rather than the browser's */
+.dm-input {
+  display: block;
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.16);
+  background: rgba(255, 255, 255, 0.75);
+  padding: 0.5rem 0.65rem;
+  font-size: 12.5px;
+  color: var(--label-on-panel);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.dm-input::placeholder {
+  color: rgba(0, 0, 0, 0.35);
+}
+.dm-input:focus {
+  outline: none;
+  border-color: var(--color-system-blue);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-system-blue) 22%, transparent);
+}
+
+/* macOS overlay scrollbars */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.28) transparent;
+}
+.scroll-thin::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.26);
+  border-radius: 9px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+.scroll-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.4);
+  background-clip: content-box;
+}
+
+} /* @layer components */
