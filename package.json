@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "catalog": "node scripts/build-catalog.mjs",
+    "icons": "node scripts/prepare-icons.mjs",
     "media": "node scripts/process-media.mjs",
     "upload": "node scripts/upload-storage.mjs",
     "assets": "npm run catalog && npm run media && npm run upload"
