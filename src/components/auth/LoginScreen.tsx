@@ -4,8 +4,8 @@ import Image from "next/image";
 import { useState } from "react";
 import { continueAsGuest } from "@/lib/guest";
 import { createClient } from "@/lib/supabase/client";
-import { useBattery } from "@/lib/useBattery";
 import { useClock } from "@/lib/useClock";
+import { BatteryIcon, WifiIcon } from "../system/StatusIcons";
 
 type Mode = "signin" | "signup";
 type Step = "email" | "password";
@@ -279,59 +279,11 @@ function Avatar() {
 /** The menu bar as it appears before login: status only, no menus. */
 function StatusBar() {
   const ms = useClock();
-  const battery = useBattery();
 
   return (
     <div className="absolute inset-x-0 top-0 flex h-7 items-center justify-end gap-3 px-4 text-white">
-      <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden>
-        <path
-          d="M3.5 9.5a13 13 0 0 1 17 0M6.5 13a8.5 8.5 0 0 1 11 0M9.5 16.4a4 4 0 0 1 5 0"
-          stroke="currentColor"
-          strokeWidth="1.7"
-          strokeLinecap="round"
-          fill="none"
-        />
-        <circle cx="12" cy="19.4" r="1.15" fill="currentColor" />
-      </svg>
-
-      <span
-        className="flex items-center gap-1"
-        aria-label={
-          battery.known ? `Battery ${Math.round(battery.level * 100)} percent` : "Battery"
-        }
-      >
-        {battery.known && (
-          <span className="tabular text-[12px] font-medium">
-            {Math.round(battery.level * 100)}%
-          </span>
-        )}
-        <svg width="25" height="13" viewBox="0 0 25 13" aria-hidden>
-          <rect
-            x="0.75"
-            y="0.75"
-            width="20"
-            height="11.5"
-            rx="3.4"
-            stroke="currentColor"
-            strokeOpacity="0.55"
-            strokeWidth="1.1"
-            fill="none"
-          />
-          <path
-            d="M22.4 4.4v4.2a2.2 2.2 0 0 0 0-4.2z"
-            fill="currentColor"
-            fillOpacity="0.55"
-          />
-          <rect
-            x="2.3"
-            y="2.3"
-            width={Math.max(2, 17 * battery.level)}
-            height="8.4"
-            rx="2"
-            fill={battery.charging || battery.level > 0.2 ? "currentColor" : "#ff5f57"}
-          />
-        </svg>
-      </span>
+      <WifiIcon />
+      <BatteryIcon showPercent />
 
       {/* Empty on the server, where the visitor's clock is not knowable. */}
       {ms > 0 && (

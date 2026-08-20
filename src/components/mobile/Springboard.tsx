@@ -4,6 +4,8 @@ import Image from "next/image";
 import { useRef, useState } from "react";
 import { designs, mediaUrl } from "@/lib/catalog";
 import { useCart, useCartHydrated } from "@/lib/cart";
+import { useClock } from "@/lib/useClock";
+import { BatteryIcon, SignalIcon, WifiIcon } from "../system/StatusIcons";
 import type { Product } from "@/lib/types";
 import MobileSheet, { type SheetTarget } from "./MobileSheet";
 
@@ -109,7 +111,9 @@ export default function Springboard() {
     <main className="fixed inset-0 flex flex-col overflow-hidden select-none">
       <Wallpaper />
 
-      <header className="flex shrink-0 items-center justify-between px-5 pb-1 pt-3">
+      <StatusBar />
+
+      <header className="flex shrink-0 items-center justify-between px-5 pb-1 pt-1.5">
         <span className="desktop-label text-[15px] font-semibold text-white">
           Digitizing Market
         </span>
@@ -220,6 +224,37 @@ export default function Springboard() {
         />
       )}
     </main>
+  );
+}
+
+/**
+ * The iOS status bar: time on the left, radios and battery on the right.
+ *
+ * The phone draws its own above the browser, so this is a second one — but the
+ * home screen is the illusion, and iOS has never shown one without it. It is
+ * kept to twenty pixels so it costs the icon grid almost nothing.
+ */
+function StatusBar() {
+  const ms = useClock();
+
+  return (
+    <div className="flex h-5 shrink-0 items-center justify-between px-6 pt-2 text-white">
+      <span className="desktop-label tabular text-[14px] font-semibold">
+        {/* Empty on the server, where the visitor's clock is not knowable. */}
+        {ms > 0
+          ? new Date(ms)
+              .toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+              // iOS shows no meridiem in the status bar.
+              .replace(/\s?[ap]\.?m\.?/i, "")
+          : ""}
+      </span>
+
+      <span className="flex items-center gap-1.5">
+        <SignalIcon />
+        <WifiIcon size={15} />
+        <BatteryIcon />
+      </span>
+    </div>
   );
 }
 
