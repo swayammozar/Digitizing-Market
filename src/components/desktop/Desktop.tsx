@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { categoryCounts, categoryOrder, featured, mediaUrl } from "@/lib/catalog";
 import { useWindows } from "@/lib/windows";
+import { useIsMobile } from "@/lib/useIsMobile";
+import Springboard from "../mobile/Springboard";
 import DesktopIcon from "./DesktopIcon";
 import MenuBar from "./MenuBar";
 import Dock from "./Dock";
@@ -31,6 +33,11 @@ const FEATURED_SPOT = { x: 60, y: 10 };
 
 export default function Desktop() {
   const open = useWindows((s) => s.open);
+  const isMobile = useIsMobile();
+
+  // Phones get the springboard instead of a scaled-down desktop: windows
+  // outgrow a 375px viewport, and dragging one fights with page scrolling.
+  if (isMobile) return <Springboard />;
 
   return (
     <main className="fixed inset-0 select-none overflow-hidden">
