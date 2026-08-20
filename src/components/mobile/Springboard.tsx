@@ -157,8 +157,21 @@ export default function Springboard() {
           <section
             key={i}
             aria-label={`Page ${i + 1} of ${pages.length}`}
-            className="grid w-full shrink-0 snap-start grid-cols-4 content-start gap-x-2 px-4 pt-2"
-            style={{ rowGap: 16 * iconScale }}
+            /**
+             * A full page spreads its rows through the whole height, which
+             * both drops the first row clear of the status bar and closes the
+             * dead band that otherwise sits above the page dots. Letting the
+             * browser divide the leftover space is exact and cannot overflow,
+             * where computing a gap from estimated row heights can.
+             *
+             * The last page holds five icons, and spreading those would strand
+             * them mid-screen. It stays top-aligned, as iOS leaves a partial
+             * page.
+             */
+            className={`grid w-full shrink-0 snap-start grid-cols-4 gap-x-2 px-4 ${
+              items.length === PER_PAGE ? "content-evenly py-1" : "content-start pt-2"
+            }`}
+            style={items.length === PER_PAGE ? undefined : { rowGap: 16 * iconScale }}
           >
             {items.map((entry) =>
               entry === "help" ? (
