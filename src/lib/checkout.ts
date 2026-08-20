@@ -16,23 +16,58 @@ export type CheckoutOutcome =
   | { status: "cancelled" }
   | { status: "error"; message: string };
 
-/** Both gateways ship a browser SDK; each is fetched once, on first use. */
+/**
+ * Both gateways ship a browser SDK; each is fetched once and shared.
+ *
+ * The promise is cached per script, not merely the tag. Resolving as soon as a
+ * tag with the right id exists looks equivalent and is not: reopening the cart
+ * mounts the button again while the first load is still in flight, the second
+ * caller resolves instantly against a script that has not executed, and its
+ * global is still undefined — so the button quietly never renders. Waiting on
+ * the same promise makes every caller resolve when the SDK is genuinely ready.
+ */
+const scriptLoads = new Map<string, Promise<void>>();
+
 function loadScript(src: string, id: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const existing = document.getElementById(id);
+  const inFlight = scriptLoads.get(id);
+  if (inFlight) return inFlight;
+
+  const load = new Promise<void>((resolve, reject) => {
+    const fail = () =>
+      reject(new Error("Could not reach the payment provider. Check your connection."));
+
+    // A tag can outlive the promise across a hot reload, so an existing one is
+    // waited on rather than trusted.
+    const existing = document.getElementById(id) as HTMLScriptElement | null;
     if (existing) {
-      resolve();
+      if (existing.dataset.loaded === "1") resolve();
+      else {
+        existing.addEventListener("load", () => resolve(), { once: true });
+        existing.addEventListener("error", fail, { once: true });
+      }
       return;
     }
+
     const script = document.createElement("script");
     script.id = id;
     script.src = src;
     script.async = true;
-    script.onload = () => resolve();
-    script.onerror = () =>
-      reject(new Error("Could not reach the payment provider. Check your connection."));
+    script.addEventListener("load", () => {
+      script.dataset.loaded = "1";
+      resolve();
+    });
+    // Dropped from the cache so a later attempt can retry rather than
+    // inheriting the failure forever.
+    script.addEventListener("error", () => {
+      scriptLoads.delete(id);
+      script.remove();
+      fail();
+    });
     document.head.appendChild(script);
   });
+
+  scriptLoads.set(id, load);
+  return load;
 }
 
 async function post(path: string, body: unknown) {

@@ -55,7 +55,19 @@ export default function PayPalButton({
 
     loadScript(paypalSdkUrl(CLIENT_ID), "paypal-sdk")
       .then(() => {
-        if (cancelled || !host.current || !window.paypal) return;
+        if (cancelled || !host.current) return;
+
+        // Reached only if the SDK loaded but exposed nothing — a wrong client
+        // id does this. Silently returning here is what left an empty space
+        // where the button should be, so it now says so.
+        if (!window.paypal) {
+          setLoading(false);
+          handlers.current.onError(
+            "PayPal loaded but did not start. Check the client id in your settings.",
+          );
+          return;
+        }
+
         setLoading(false);
 
         return window.paypal
@@ -77,7 +89,10 @@ export default function PayPalButton({
             // Cancelling is a decision, not a fault — say nothing.
             onCancel: () => {},
           })
-          .render(host.current);
+          .render(host.current)
+          .catch(() =>
+            handlers.current.onError("PayPal's button could not be displayed."),
+          );
       })
       .catch((error: Error) => {
         if (cancelled) return;
