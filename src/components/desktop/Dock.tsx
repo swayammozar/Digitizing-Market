@@ -76,22 +76,20 @@ const ITEMS: DockEntry[] = [
   },
 ];
 
-const GLYPHS: Record<GlyphKind, { tint: string; path: React.ReactNode }> = {
+/**
+ * Tiles are drawn here rather than baked into the images so the glyphs stay a
+ * single system: same gradients, same optical size, and a glyph can be swapped
+ * for artwork without redrawing its background. `art` is line art already
+ * centred at the right scale by scripts/prepare-icons.mjs; `path` is drawn
+ * inline. A glyph supplies one or the other.
+ */
+const GLYPHS: Record<
+  GlyphKind,
+  { tint: string; path?: React.ReactNode; art?: string }
+> = {
   custom: {
     tint: "linear-gradient(160deg,#8e7cff,#5a43e8)",
-    path: (
-      <>
-        <path
-          d="M6 18.5c3-1 5.2-3.2 6.6-6.2C14 9.3 15.5 7 18 6"
-          stroke="white"
-          strokeWidth="1.7"
-          strokeLinecap="round"
-          fill="none"
-        />
-        <circle cx="18.4" cy="5.6" r="1.7" fill="white" />
-        <path d="M5 19.4 4 20.4l1.4.2.2-1.2Z" fill="white" />
-      </>
-    ),
+    art: "/ui/custom.png",
   },
   cart: {
     tint: "linear-gradient(160deg,#ffb454,#f0762b)",
@@ -269,17 +267,30 @@ function DockIcon({
           />
         ) : glyph ? (
           <span
-            className="grid h-full w-full place-items-center rounded-[22%] shadow-[inset_0_1px_0_rgba(255,255,255,.45),0_4px_8px_rgba(0,0,0,.3)]"
+            className="grid h-full w-full place-items-center overflow-hidden rounded-[22%] shadow-[inset_0_1px_0_rgba(255,255,255,.45),0_4px_8px_rgba(0,0,0,.3)]"
             style={{ background: glyph.tint }}
           >
-            <svg
-              width={size * 0.62}
-              height={size * 0.62}
-              viewBox="0 0 24 24"
-              aria-hidden
-            >
-              {glyph.path}
-            </svg>
+            {glyph.art ? (
+              // Already inset to the glyph scale by prepare-icons.mjs, so it
+              // fills the tile rather than being scaled again here.
+              <Image
+                src={glyph.art}
+                alt=""
+                width={512}
+                height={512}
+                className="h-full w-full object-contain"
+                priority
+              />
+            ) : (
+              <svg
+                width={size * 0.62}
+                height={size * 0.62}
+                viewBox="0 0 24 24"
+                aria-hidden
+              >
+                {glyph.path}
+              </svg>
+            )}
           </span>
         ) : null}
 
