@@ -1,5 +1,5 @@
-import Desktop from "@/components/desktop/Desktop";
+import Shell from "@/components/Shell";
 
 export default function Home() {
-  return <Desktop />;
+  return <Shell />;
 }
