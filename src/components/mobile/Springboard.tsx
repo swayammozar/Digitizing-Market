@@ -249,20 +249,32 @@ function AppIcon({
   );
 }
 
+/**
+ * iOS blurs the wallpaper behind the home screen, and it is doing real work:
+ * icon labels sit directly on it with no window chrome to separate them, so a
+ * sharp photograph competes with every label at once.
+ *
+ * It also solves a problem this particular wallpaper has. The source is
+ * 1200x665 and upscales on any modern phone; blurred, there is no detail left
+ * to look soft.
+ */
 function Wallpaper() {
   return (
-    <div className="absolute inset-0 -z-10">
+    <div className="absolute inset-0 -z-10 overflow-hidden">
       <Image
         src="/ui/wallpaper.jpg"
         alt=""
         fill
         priority
-        sizes="100vw"
-        className="object-cover"
+        // Deliberately small: the result is blurred past recognition, so a
+        // larger download would buy nothing but bandwidth.
+        sizes="480px"
+        // Blur samples beyond the element's edges and drags transparency
+        // inward, leaving pale borders. Scaling up first pushes those edges
+        // off-screen.
+        className="scale-125 object-cover blur-[26px]"
       />
-      {/* Slightly darker than the desktop's: phone labels sit directly over the
-          wallpaper with no window chrome to separate them from it. */}
-      <div className="absolute inset-0 bg-black/15" aria-hidden />
+      <div className="absolute inset-0 bg-black/25" aria-hidden />
     </div>
   );
 }
