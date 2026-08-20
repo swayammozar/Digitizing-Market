@@ -9,9 +9,8 @@ import type { NextConfig } from "next";
  * Derived from the env var rather than hardcoded, so moving to a different
  * Supabase project or a CDN needs no code change.
  */
-const mediaHost = process.env.NEXT_PUBLIC_MEDIA_BASE_URL
-  ? new URL(process.env.NEXT_PUBLIC_MEDIA_BASE_URL).hostname
-  : undefined;
+const mediaBase = process.env.NEXT_PUBLIC_MEDIA_BASE_URL?.trim();
+const mediaHost = mediaBase ? new URL(mediaBase).hostname : undefined;
 
 const nextConfig: NextConfig = {
   images: {

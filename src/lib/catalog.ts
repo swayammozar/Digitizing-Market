@@ -25,8 +25,18 @@ export const categoryCounts: Record<string, number> = Object.fromEntries(
   categoryOrder.map((c) => [c, byCategory(c).length]),
 );
 
-/** Where processed media is served from — Supabase Storage in production. */
-const MEDIA_BASE = process.env.NEXT_PUBLIC_MEDIA_BASE_URL ?? "/media";
+/**
+ * Where processed media is served from — Supabase Storage in production.
+ *
+ * Trimmed, because pasting a URL into a dashboard's environment-variable field
+ * very easily carries a leading tab or newline with it. `new URL()` strips
+ * surrounding whitespace per spec, so next.config.ts still resolves the right
+ * host and nothing looks wrong at build time — but the value interpolated into
+ * an `src` keeps the whitespace and every image silently fails to load.
+ */
+const MEDIA_BASE = (process.env.NEXT_PUBLIC_MEDIA_BASE_URL ?? "/media")
+  .trim()
+  .replace(/\/+$/, "");
 
 export function mediaUrl(key: string): string {
   return `${MEDIA_BASE}/${key}`;
