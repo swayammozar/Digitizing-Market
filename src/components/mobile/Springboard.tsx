@@ -5,8 +5,9 @@ import { useRef, useState } from "react";
 import { designs, mediaUrl } from "@/lib/catalog";
 import { useCart, useCartHydrated } from "@/lib/cart";
 import { useClock } from "@/lib/useClock";
+import { useViewport } from "@/lib/desktopLayout";
 import { BatteryIcon, SignalIcon, WifiIcon } from "../system/StatusIcons";
-import type { Product } from "@/lib/types";
+import type { Currency, Product } from "@/lib/types";
 import MobileSheet, { type SheetTarget } from "./MobileSheet";
 
 /**
@@ -19,6 +20,29 @@ import MobileSheet, { type SheetTarget } from "./MobileSheet";
  * that scrolls vertically stops reading as a home screen.
  */
 const PER_PAGE = 20;
+
+/**
+ * Measured from the rendered grid: an icon with a two-line label occupies 96px
+ * and rows repeat every 111px, so five rows need 540px of clear space.
+ */
+const ROW_PITCH = 111;
+const ICON_BLOCK = 96;
+/** Status bar, page dots, dock, and the margins around them. */
+const CHROME = 31 + 27 + 78 + 20;
+
+/**
+ * How much to shrink the icons so five rows still clear the dock.
+ *
+ * A short phone cannot fit five rows at full size — at 568px they overlap the
+ * dock outright. Showing fewer icons per page instead would cost every common
+ * phone a row to accommodate a rare one, so the grid keeps its twenty and the
+ * icons give up the difference. The floor stops labels becoming unreadable.
+ */
+function springboardScale(viewportHeight: number): number {
+  const available = viewportHeight - CHROME;
+  const needed = (PER_PAGE / 4 - 1) * ROW_PITCH + ICON_BLOCK;
+  return Math.min(1, Math.max(0.72, available / needed));
+}
 
 interface DockItem {
   key: string;
@@ -99,6 +123,9 @@ export default function Springboard() {
   const cartCount = useCart((s) => s.items.length);
   const hydrated = useCartHydrated();
 
+  const viewport = useViewport();
+  const iconScale = springboardScale(viewport.height);
+
   // The catalog plus one Help tile, which is where the licence, formats and
   // FAQ live now that there is no menu bar to hang them from.
   const pages: (Product | "help")[][] = [];
@@ -111,25 +138,10 @@ export default function Springboard() {
     <main className="fixed inset-0 flex flex-col overflow-hidden select-none">
       <Wallpaper />
 
-      <StatusBar />
-
-      {/* Centred as a pair, the way a home screen's date widget sits — the shop
-          name and the currency it is priced in belong together. */}
-      <header className="flex shrink-0 items-center justify-center gap-2.5 px-5 pb-1 pt-1.5">
-        <span className="desktop-label text-[15px] font-semibold text-white">
-          Digitizing Market
-        </span>
-        <button
-          type="button"
-          onClick={() => setCurrency(currency === "USD" ? "INR" : "USD")}
-          aria-label={
-            currency === "USD" ? "Prices in dollars, switch to rupees" : "Prices in rupees, switch to dollars"
-          }
-          className="desktop-label tabular rounded-full bg-black/25 px-2.5 py-1 text-[12px] font-medium text-white"
-        >
-          {currency === "USD" ? "$ USD" : "₹ INR"}
-        </button>
-      </header>
+      <StatusBar
+        currency={currency}
+        onToggleCurrency={() => setCurrency(currency === "USD" ? "INR" : "USD")}
+      />
 
       {/* Native horizontal paging: scroll-snap gives real momentum and rubber
           banding, which a pointer-event reimplementation never quite matches. */}
@@ -145,13 +157,15 @@ export default function Springboard() {
           <section
             key={i}
             aria-label={`Page ${i + 1} of ${pages.length}`}
-            className="grid w-full shrink-0 snap-start grid-cols-4 content-start gap-x-2 gap-y-4 px-4 pt-2"
+            className="grid w-full shrink-0 snap-start grid-cols-4 content-start gap-x-2 px-4 pt-2"
+            style={{ rowGap: 16 * iconScale }}
           >
             {items.map((entry) =>
               entry === "help" ? (
                 <AppIcon
                   key="help"
                   label="Help"
+                  scale={iconScale}
                   onOpen={() => setSheet({ kind: "help" })}
                   tile={
                     <Image
@@ -167,6 +181,7 @@ export default function Springboard() {
                 <AppIcon
                   key={entry.slug}
                   label={entry.name}
+                  scale={iconScale}
                   onOpen={() => setSheet({ kind: "product", slug: entry.slug })}
                   tile={
                     <Image
@@ -237,18 +252,29 @@ export default function Springboard() {
 }
 
 /**
- * The iOS status bar: time on the left, radios and battery on the right.
+ * The iOS status bar, carrying the shop's name in the middle of it: time on the
+ * left, brand and currency centred, radios and battery on the right.
  *
- * The phone draws its own above the browser, so this is a second one — but the
- * home screen is the illusion, and iOS has never shown one without it. It is
- * kept to twenty pixels so it costs the icon grid almost nothing.
+ * Laid out as a three-column grid rather than space-between, because the two
+ * edges hold different amounts — a short clock against three icons — and
+ * spacing them apart would leave the middle off-centre by the difference. Equal
+ * `1fr` tracks put the centre column in the true middle whatever they contain.
+ *
+ * Sized to survive a 320px phone: everything on one line is tight, so the type
+ * is small and the shop name truncates before it can push the battery off.
  */
-function StatusBar() {
+function StatusBar({
+  currency,
+  onToggleCurrency,
+}: {
+  currency: Currency;
+  onToggleCurrency: () => void;
+}) {
   const ms = useClock();
 
   return (
-    <div className="flex h-5 shrink-0 items-center justify-between px-6 pt-2 text-white">
-      <span className="desktop-label tabular text-[14px] font-semibold">
+    <div className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2 px-4 pb-0.5 pt-2 text-white">
+      <span className="desktop-label tabular text-[13px] font-semibold">
         {/* Empty on the server, where the visitor's clock is not knowable. */}
         {ms > 0
           ? new Date(ms)
@@ -258,9 +284,27 @@ function StatusBar() {
           : ""}
       </span>
 
-      <span className="flex items-center gap-1.5">
+      <span className="flex min-w-0 items-center gap-1.5">
+        <span className="desktop-label truncate text-[13.5px] font-semibold">
+          Digitizing Market
+        </span>
+        <button
+          type="button"
+          onClick={onToggleCurrency}
+          aria-label={
+            currency === "USD"
+              ? "Prices in dollars, switch to rupees"
+              : "Prices in rupees, switch to dollars"
+          }
+          className="desktop-label tabular shrink-0 rounded-full bg-black/30 px-2 py-0.5 text-[11px] font-medium"
+        >
+          {currency === "USD" ? "$ USD" : "₹ INR"}
+        </button>
+      </span>
+
+      <span className="flex items-center justify-end gap-1.5">
         <SignalIcon />
-        <WifiIcon size={15} />
+        <WifiIcon size={14} />
         <BatteryIcon />
       </span>
     </div>
@@ -271,22 +315,33 @@ function AppIcon({
   label,
   tile,
   onOpen,
+  scale = 1,
 }: {
   label: string;
   tile: React.ReactNode;
   onOpen: () => void;
+  scale?: number;
 }) {
   return (
     <button
       type="button"
       onClick={onOpen}
-      className="flex flex-col items-center gap-1.5"
+      className="flex flex-col items-center"
+      style={{ gap: 6 * scale }}
       aria-label={label}
     >
-      <span className="block h-[62px] w-[62px] overflow-hidden rounded-[22%] shadow-[0_3px_8px_rgba(0,0,0,.3)] transition-transform active:scale-90">
+      <span
+        className="block overflow-hidden rounded-[22%] shadow-[0_3px_8px_rgba(0,0,0,.3)] transition-transform active:scale-90"
+        style={{ width: 62 * scale, height: 62 * scale }}
+      >
         {tile}
       </span>
-      <span className="desktop-label line-clamp-2 w-full text-center text-[11px] font-medium leading-tight text-white">
+      <span
+        className="desktop-label line-clamp-2 w-full text-center font-medium leading-tight text-white"
+        // Shrinks more slowly than the tile: a label has to stay readable even
+        // when the icon above it has given up a quarter of its size.
+        style={{ fontSize: 11 * Math.max(scale, 0.88) }}
+      >
         {label}
       </span>
     </button>
