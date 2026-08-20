@@ -27,6 +27,19 @@ function config() {
 export const toPaise = (rupees: number) => Math.round(rupees * 100);
 export const toRupees = (paise: number) => paise / 100;
 
+/**
+ * The key id the browser needs to open Razorpay Checkout. Public by design —
+ * the secret is what authorises anything.
+ *
+ * Exposed as a function rather than letting callers read the environment
+ * variable themselves: the route did exactly that and handed the browser a key
+ * with a trailing newline still attached, which Razorpay rejected as
+ * "Payment Failed". Everything leaves through here, cleaned.
+ */
+export function razorpayKeyId(): string {
+  return config().keyId;
+}
+
 async function call<T>(path: string, init: RequestInit): Promise<T> {
   const { keyId, keySecret } = config();
   const response = await fetch(`${HOST}${path}`, {

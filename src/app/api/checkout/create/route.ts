@@ -6,7 +6,7 @@ import {
   recordPendingOrder,
 } from "@/lib/server/fulfilment";
 import { createPayPalOrder } from "@/lib/server/paypal";
-import { createRazorpayOrder } from "@/lib/server/razorpay";
+import { createRazorpayOrder, razorpayKeyId } from "@/lib/server/razorpay";
 
 /**
  * Starts a checkout.
@@ -82,7 +82,9 @@ export async function POST(request: Request) {
       amount: order.amount, // paise, which is what Razorpay Checkout expects
       total: cart.total,
       currency,
-      keyId: process.env.RAZORPAY_KEY_ID,
+      // Never the raw environment variable: it may carry whitespace from a
+      // paste, and Razorpay rejects a key that does.
+      keyId: razorpayKeyId(),
     });
   } catch (error) {
     if (error instanceof CheckoutError) {

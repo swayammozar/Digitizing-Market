@@ -51,6 +51,19 @@ async function accessToken(): Promise<string> {
   });
 
   if (!response.ok) {
+    // 401 means PayPal was reached and said no — a wrong client id or secret,
+    // or a sandbox key paired with the live host. Reporting that as a network
+    // problem sends everyone looking in the wrong place, so the two cases are
+    // separated here.
+    const detail = await response.text().catch(() => "");
+    if (response.status === 401) {
+      console.error("paypal auth rejected", config().host, detail.slice(0, 200));
+      throw new CheckoutError(
+        "PayPal rejected these credentials. Check the client id and secret, " +
+          "and that they match the sandbox or live setting.",
+        503,
+      );
+    }
     throw new CheckoutError("Could not reach PayPal. Try again in a moment.", 502);
   }
 
