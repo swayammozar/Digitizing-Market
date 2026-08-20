@@ -20,6 +20,35 @@ export default function ServiceWindow({ win }: { win: WindowState }) {
   const product = bySlug("custom-digitizing");
   const [sent, setSent] = useState(false);
   const [file, setFile] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  /**
+   * Sent as FormData rather than JSON so the artwork rides along with the
+   * fields in one request — a two-step upload can leave a file with no
+   * enquiry attached to it.
+   */
+  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setBusy(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/custom-request", {
+        method: "POST",
+        body: new FormData(event.currentTarget),
+      });
+      const data = (await response.json()) as { ok?: boolean; error?: string };
+      if (!response.ok) throw new Error(data.error ?? "The request could not be sent.");
+      setSent(true);
+    } catch (err) {
+      // Never a silent failure: the whole point of this form is that someone
+      // is waiting to hear back.
+      setError(err instanceof Error ? err.message : "The request could not be sent.");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <WindowFrame win={win} subtitle="Your artwork, digitized for embroidery">
@@ -75,16 +104,11 @@ export default function ServiceWindow({ win }: { win: WindowState }) {
               </p>
             </div>
           ) : (
-            <form
-              className="space-y-3.5"
-              onSubmit={(e) => {
-                e.preventDefault();
-                setSent(true);
-              }}
-            >
+            <form className="space-y-3.5" onSubmit={submit}>
               <Field label="Your email">
                 <input
                   type="email"
+                  name="email"
                   required
                   placeholder="you@example.com"
                   className="dm-input"
@@ -114,6 +138,7 @@ export default function ServiceWindow({ win }: { win: WindowState }) {
                 </span>
                 <input
                   type="file"
+                  name="artwork"
                   accept=".png,.jpg,.jpeg,.svg,.pdf,.ai,.eps"
                   className="sr-only"
                   onChange={(e) => setFile(e.target.files?.[0]?.name ?? null)}
@@ -124,6 +149,7 @@ export default function ServiceWindow({ win }: { win: WindowState }) {
                 <Field label="Width (mm)">
                   <input
                     type="number"
+                    name="widthMm"
                     min={10}
                     max={400}
                     placeholder="90"
@@ -131,7 +157,7 @@ export default function ServiceWindow({ win }: { win: WindowState }) {
                   />
                 </Field>
                 <Field label="Format">
-                  <select className="dm-input" defaultValue="DST">
+                  <select name="format" className="dm-input" defaultValue="DST">
                     {FORMATS.map((f) => (
                       <option key={f}>{f}</option>
                     ))}
@@ -140,7 +166,7 @@ export default function ServiceWindow({ win }: { win: WindowState }) {
               </div>
 
               <Field label="Placement">
-                <select className="dm-input" defaultValue="Left chest">
+                <select name="placement" className="dm-input" defaultValue="Left chest">
                   {PLACEMENTS.map((p) => (
                     <option key={p}>{p}</option>
                   ))}
@@ -149,17 +175,28 @@ export default function ServiceWindow({ win }: { win: WindowState }) {
 
               <Field label="Anything we should know">
                 <textarea
+                  name="notes"
                   rows={3}
                   placeholder="Thread colours to match, deadline, fabric…"
                   className="dm-input resize-none"
                 />
               </Field>
 
+              {error && (
+                <p
+                  role="alert"
+                  className="rounded-md bg-[color:var(--color-hanko)]/12 px-3 py-2 text-[12.5px] text-[color:var(--color-hanko)]"
+                >
+                  {error}
+                </p>
+              )}
+
               <button
                 type="submit"
-                className="w-full rounded-lg bg-[color:var(--color-hanko)] px-4 py-2.5 text-[14px] font-semibold text-white transition-[filter,transform] hover:brightness-110 active:scale-[.99]"
+                disabled={busy}
+                className="w-full rounded-lg bg-[color:var(--color-hanko)] px-4 py-2.5 text-[14px] font-semibold text-white transition-[filter,transform] hover:brightness-110 active:scale-[.99] disabled:opacity-60"
               >
-                Request a quote
+                {busy ? "Sending…" : "Request a quote"}
               </button>
               <p className="text-center text-[11.5px] text-[color:var(--label-on-panel-secondary)]">
                 No payment now. We quote first, you decide after.

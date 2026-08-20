@@ -163,14 +163,7 @@ function Content({
 
   if (target.kind === "downloads") return <DownloadsLibrary />;
 
-  if (target.kind === "service") {
-    return (
-      <Message
-        title="Custom digitizing"
-        body="Send us a logo, a drawing, or a photo of a patch and we digitize it by hand — every machine format, with a colour chart. Most jobs come back within 24 hours. Open this page on a computer to attach artwork, or email hello@digitizingmarket.com."
-      />
-    );
-  }
+  if (target.kind === "service") return <MobileCustomRequest />;
 
   return <MobileHelp />;
 }
@@ -287,6 +280,128 @@ function MobileHelp() {
         </section>
       ))}
     </div>
+  );
+}
+
+/**
+ * The quote form on a phone. Same endpoint as the desktop window, fewer fields
+ * asked for up front — a phone keyboard makes every optional field a reason to
+ * abandon, and the rest can be settled by email.
+ */
+function MobileCustomRequest() {
+  const [sent, setSent] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [file, setFile] = useState<string | null>(null);
+
+  if (sent) {
+    return (
+      <Message
+        title="Request received"
+        body="We'll email you a quote within one working day."
+      />
+    );
+  }
+
+  return (
+    <form
+      className="space-y-3.5 p-5"
+      onSubmit={async (event) => {
+        event.preventDefault();
+        setBusy(true);
+        setError(null);
+        try {
+          const response = await fetch("/api/custom-request", {
+            method: "POST",
+            body: new FormData(event.currentTarget),
+          });
+          const data = (await response.json()) as { error?: string };
+          if (!response.ok) throw new Error(data.error ?? "The request could not be sent.");
+          setSent(true);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "The request could not be sent.");
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      <p className="text-[13px] leading-relaxed text-[color:var(--label-on-panel-secondary)]">
+        Send a logo, a drawing, or a photo of a patch. We digitize it by hand and
+        send back every machine format with a colour chart, usually within a day.
+      </p>
+
+      <label className="block">
+        <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[color:var(--label-on-panel-secondary)]">
+          Your email
+        </span>
+        <input
+          type="email"
+          name="email"
+          required
+          inputMode="email"
+          placeholder="you@example.com"
+          className="dm-input"
+        />
+      </label>
+
+      <label className="block cursor-pointer">
+        <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[color:var(--label-on-panel-secondary)]">
+          Artwork
+        </span>
+        <span className="flex items-center gap-2.5 rounded-lg border border-dashed border-black/25 px-3 py-3 text-[12.5px] text-[color:var(--label-on-panel-secondary)]">
+          <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden className="shrink-0">
+            <path
+              d="M12 16V4m0 0 4 4m-4-4L8 8M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
+          </svg>
+          <span className="truncate">{file ?? "Choose a photo or file"}</span>
+        </span>
+        <input
+          type="file"
+          name="artwork"
+          accept=".png,.jpg,.jpeg,.svg,.pdf,.ai,.eps"
+          className="sr-only"
+          onChange={(e) => setFile(e.target.files?.[0]?.name ?? null)}
+        />
+      </label>
+
+      <label className="block">
+        <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[color:var(--label-on-panel-secondary)]">
+          Anything we should know
+        </span>
+        <textarea
+          name="notes"
+          rows={3}
+          placeholder="Size, placement, thread colours, deadline…"
+          className="dm-input resize-none"
+        />
+      </label>
+
+      {error && (
+        <p
+          role="alert"
+          className="rounded-md bg-[color:var(--color-hanko)]/12 px-3 py-2 text-[12.5px] text-[color:var(--color-hanko)]"
+        >
+          {error}
+        </p>
+      )}
+
+      <button
+        type="submit"
+        disabled={busy}
+        className="w-full rounded-lg bg-[color:var(--color-hanko)] px-4 py-3 text-[15px] font-semibold text-white disabled:opacity-60"
+      >
+        {busy ? "Sending…" : "Request a quote"}
+      </button>
+      <p className="text-center text-[11.5px] text-[color:var(--label-on-panel-secondary)]">
+        No payment now. We quote first, you decide after.
+      </p>
+    </form>
   );
 }
 
