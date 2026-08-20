@@ -33,9 +33,23 @@ const RADIUS = Math.round(SIZE * 0.22);
 /** Matches the 0.62 scale the SVG glyphs are drawn at inside their tiles. */
 const GLYPH_INSET = 0.62;
 
+const APP = path.join(ROOT, "src", "app");
+
+/**
+ * "favicon" — the logo as a browser tab icon: white mark on a black disc,
+ * matching the login avatar. Written into src/app, where Next.js picks up
+ * icon.png and apple-icon.png by filename and emits the right <link> tags.
+ */
 const ICONS = [
-  { from: "instagram icon.png", to: "instagram.png", mode: "tile" },
-  { from: "custom icon.png", to: "custom.png", mode: "glyph" },
+  { from: "instagram icon.png", to: path.join(OUT, "instagram.png"), mode: "tile" },
+  { from: "custom icon.png", to: path.join(OUT, "custom.png"), mode: "glyph" },
+  { from: "custom icon.png", to: path.join(APP, "icon.png"), mode: "favicon", size: 512 },
+  {
+    from: "custom icon.png",
+    to: path.join(APP, "apple-icon.png"),
+    mode: "favicon",
+    size: 180,
+  },
 ];
 
 const roundedMask = Buffer.from(
@@ -78,16 +92,49 @@ async function buildGlyph(src) {
     .png();
 }
 
+/**
+ * A tab icon is often rendered at 16px, where thin strokes disappear. The mark
+ * is given a slightly larger share of the tile than a dock glyph gets, and sits
+ * on solid black so it stays legible against both light and dark browser
+ * chrome — a transparent favicon vanishes into a dark title bar.
+ */
+async function buildFavicon(src, size) {
+  const art = Math.round(size * 0.66);
+  const mark = await sharp(src)
+    .trim({ threshold: 8 })
+    .resize(art, art, { fit: "inside" })
+    .png()
+    .toBuffer();
+
+  return sharp({
+    create: {
+      width: size,
+      height: size,
+      channels: 4,
+      background: { r: 18, g: 18, b: 18, alpha: 1 },
+    },
+  })
+    .composite([{ input: mark, gravity: "centre" }])
+    .png();
+}
+
 async function main() {
-  for (const { from, to, mode } of ICONS) {
+  for (const { from, to, mode, size } of ICONS) {
     const src = path.join(SOURCE, from);
     const before = await sharp(src).metadata();
 
-    const pipeline = mode === "tile" ? await buildTile(src) : await buildGlyph(src);
-    const info = await pipeline.toFile(path.join(OUT, to));
+    const pipeline =
+      mode === "tile"
+        ? await buildTile(src)
+        : mode === "favicon"
+          ? await buildFavicon(src, size)
+          : await buildGlyph(src);
+
+    const info = await pipeline.toFile(to);
 
     console.log(
-      `${from}: ${before.width}x${before.height} -> ${info.width}x${info.height} (${mode})`,
+      `${from}: ${before.width}x${before.height} -> ${info.width}x${info.height} ` +
+        `(${mode}) -> ${path.relative(ROOT, to)}`,
     );
   }
 }

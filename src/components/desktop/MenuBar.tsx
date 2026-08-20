@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { useCart, useCartHydrated } from "@/lib/cart";
 import { createClient } from "@/lib/supabase/client";
@@ -195,9 +196,16 @@ export default function MenuBar() {
       className="glass glass-thin fixed inset-x-0 top-0 z-[9999] flex h-7 items-center gap-1 px-3 text-[13px] text-white"
       style={{ borderRadius: 0 }}
     >
-      <span className="mr-1 text-[15px] leading-none" aria-hidden>
-        🧵
-      </span>
+      {/* The shop's own mark rather than an emoji, which renders differently on
+          every platform and would be the one thing here not under our control. */}
+      <Image
+        src="/ui/custom.png"
+        alt=""
+        width={64}
+        height={64}
+        priority
+        className="mr-1 h-[15px] w-[15px] shrink-0 object-contain"
+      />
 
       {MENUS.map((menu, i) => (
         <div key={menu.title} className="relative">
