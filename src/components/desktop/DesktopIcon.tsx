@@ -22,6 +22,8 @@ interface Props {
   variant: "folder" | "design";
   image?: string;
   count?: number;
+  /** Shrinks the icon so a full catalog still fits a small window. */
+  scale?: number;
 }
 
 export default function DesktopIcon({
@@ -34,6 +36,7 @@ export default function DesktopIcon({
   variant,
   image,
   count,
+  scale = 1,
 }: Props) {
   const [selected, setSelected] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -120,13 +123,16 @@ export default function DesktopIcon({
           onOpen();
         }
       }}
-      className={`animate-icon-settle absolute flex w-[104px] -translate-x-1/2 flex-col items-center gap-1.5 rounded-lg p-1.5 ${
+      className={`animate-icon-settle absolute flex -translate-x-1/2 flex-col items-center rounded-lg ${
         dragging ? "z-50 cursor-grabbing" : "cursor-default"
       }`}
       style={{
         left: `${position.x}%`,
         top: `${position.y}%`,
         animationDelay: `${delay}ms`,
+        width: 104 * scale,
+        gap: 6 * scale,
+        padding: 6 * scale,
         // A dragged icon lifts off the desktop and follows the cursor exactly;
         // any transition here would make it lag behind.
         opacity: dragging ? 0.85 : undefined,
@@ -135,8 +141,12 @@ export default function DesktopIcon({
     >
       <span
         className={`relative block overflow-hidden transition-transform duration-150 ${
-          variant === "folder" ? "h-[66px] w-[74px]" : "h-[62px] w-[78px]"
-        } ${selected && !dragging ? "scale-[0.97]" : ""}`}
+          selected && !dragging ? "scale-[0.97]" : ""
+        }`}
+        style={{
+          width: (variant === "folder" ? 74 : 78) * scale,
+          height: (variant === "folder" ? 66 : 62) * scale,
+        }}
       >
         {variant === "folder" ? (
           <FolderGlyph />
@@ -144,8 +154,12 @@ export default function DesktopIcon({
           <Image
             src={image!}
             alt=""
-            width={320}
-            height={256}
+            // Displayed at 78x62, so a 160px source covers a 2x screen. With
+            // fifty-one of these on screen at once, asking for the 320px
+            // variant would quadruple the desktop's payload for no visible
+            // gain.
+            width={160}
+            height={128}
             draggable={false}
             className="h-full w-full rounded-[10px] object-cover shadow-[0_3px_10px_rgba(0,0,0,.35)] ring-1 ring-white/25"
           />
@@ -155,10 +169,16 @@ export default function DesktopIcon({
         )}
       </span>
 
+      {/* Clamped to two lines: a few designs have long names, and one icon
+          growing to three lines would push its row out of alignment with the
+          rest of the scatter. */}
       <span
-        className={`desktop-label max-w-full rounded px-1.5 py-0.5 text-[12.5px] font-medium leading-tight text-white ${
+        className={`desktop-label line-clamp-2 max-w-full rounded px-1.5 py-0.5 text-center font-medium leading-tight text-white ${
           selected ? "bg-[color:var(--color-system-blue)]" : ""
         }`}
+        // Floored at 10.5px: below that the label stops being readable, and an
+        // unreadable label is worse than a slightly denser desktop.
+        style={{ fontSize: Math.max(10.5, 12.5 * scale) }}
       >
         {label}
       </span>

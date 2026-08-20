@@ -1,43 +1,31 @@
 "use client";
 
 import Image from "next/image";
-import { categoryCounts, categoryOrder, featured, mediaUrl } from "@/lib/catalog";
-import { useWindows } from "@/lib/windows";
+import { byCategory, categoryCounts, categoryOrder, mediaUrl } from "@/lib/catalog";
+import { scatterLayout, useViewport } from "@/lib/desktopLayout";
 import { useIsMobile } from "@/lib/useIsMobile";
+import { useWindows } from "@/lib/windows";
 import Springboard from "../mobile/Springboard";
 import DesktopIcon from "./DesktopIcon";
 import MenuBar from "./MenuBar";
 import Dock from "./Dock";
 import WindowLayer from "../window/WindowLayer";
 
-/**
- * Icon placement is hand-set rather than laid out on a grid, because the GIF's
- * desktop is scattered and a grid reads like a file manager instead.
- *
- * The positions dodge the two busy regions of the wallpaper: the yellow
- * katakana across the top-left, and the cat that fills the centre and lower
- * middle. Everything sits on flat cyan, which is why the labels need no plate
- * behind them.
- */
-const SPOTS: Record<string, { x: number; y: number }> = {
-  "Tattoo & Dark": { x: 6, y: 30 },
-  "Animals": { x: 16, y: 47 },
-  "Floral & Nature": { x: 5, y: 64 },
-  "Streetwear & Urban": { x: 79, y: 26 },
-  "Japanese & Anime": { x: 90, y: 43 },
-  "Faith & Festive": { x: 77, y: 59 },
-  "Food & Drink": { x: 88, y: 75 },
-};
-
-const FEATURED_SPOT = { x: 60, y: 10 };
-
 export default function Desktop() {
   const open = useWindows((s) => s.open);
   const isMobile = useIsMobile();
+  const viewport = useViewport();
 
   // Phones get the springboard instead of a scaled-down desktop: windows
   // outgrow a 375px viewport, and dragging one fights with page scrolling.
   if (isMobile) return <Springboard />;
+
+  // Folders first so the categories occupy the top rows and stay easy to find,
+  // then every design grouped by the folder it belongs to — the desktop reads
+  // in the same order as the sidebar.
+  const designs = categoryOrder.flatMap((category) => byCategory(category));
+  const ids = [...categoryOrder, ...designs.map((p) => p.slug)];
+  const { positions, scale } = scatterLayout(ids, viewport);
 
   return (
     <main className="fixed inset-0 select-none overflow-hidden">
@@ -45,36 +33,36 @@ export default function Desktop() {
       <MenuBar />
 
       <div className="absolute inset-0 pt-7">
-        {categoryOrder.map((category, i) => {
-          const spot = SPOTS[category];
-          if (!spot) return null;
-          return (
-            <DesktopIcon
-              key={category}
-              id={category}
-              variant="folder"
-              label={category}
-              count={categoryCounts[category]}
-              x={spot.x}
-              y={spot.y}
-              delay={120 + i * 55}
-              onOpen={() =>
-                open({ kind: "folder", target: category, title: category })
-              }
-            />
-          );
-        })}
+        {categoryOrder.map((category, i) => (
+          <DesktopIcon
+            key={category}
+            id={category}
+            variant="folder"
+            label={category}
+            count={categoryCounts[category]}
+            x={positions[category].x}
+            y={positions[category].y}
+            scale={scale}
+            delay={80 + i * 26}
+            onOpen={() =>
+              open({ kind: "folder", target: category, title: category })
+            }
+          />
+        ))}
 
-        {featured.map((product) => (
+        {designs.map((product, i) => (
           <DesktopIcon
             key={product.slug}
             id={product.slug}
             variant="design"
             label={product.name}
             image={mediaUrl(product.media.icon)}
-            x={FEATURED_SPOT.x}
-            y={FEATURED_SPOT.y}
-            delay={90}
+            x={positions[product.slug].x}
+            y={positions[product.slug].y}
+            scale={scale}
+            // Staggered after the folders, and capped so the last icon does
+            // not arrive a second and a half after the first.
+            delay={260 + Math.min(i, 30) * 16}
             onOpen={() =>
               open({
                 kind: "product",
@@ -114,6 +102,10 @@ function Wallpaper() {
         }}
         aria-hidden
       />
+      {/* With fifty-one icons the wallpaper is backdrop rather than subject, so
+          a light scrim keeps every label readable over the yellow katakana and
+          the cat's fur alike. */}
+      <div className="absolute inset-0 bg-black/20" aria-hidden />
     </div>
   );
 }
