@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCart, useCartHydrated } from "@/lib/cart";
 import { createClient } from "@/lib/supabase/client";
+import { useClock } from "@/lib/useClock";
 import { useSession } from "@/lib/useSession";
 import { useWindows } from "@/lib/windows";
 import type { Currency } from "@/lib/types";
@@ -50,35 +51,6 @@ const PAGE_TITLES: Record<string, string> = {
   faq: "Frequently asked questions",
   refunds: "Refunds",
 };
-
-/**
- * The clock is an external source of truth rather than component state: the
- * server cannot know the visitor's time, and useSyncExternalStore is the one
- * hook that lets the server and client disagree on first paint without it
- * counting as a hydration mismatch.
- *
- * One interval serves every subscriber and stops when the last one leaves.
- */
-let clockNow = 0;
-let clockTimer: ReturnType<typeof setInterval> | null = null;
-const clockListeners = new Set<() => void>();
-
-function subscribeToClock(onChange: () => void) {
-  clockNow = Date.now();
-  clockListeners.add(onChange);
-  clockTimer ??= setInterval(() => {
-    clockNow = Date.now();
-    for (const listener of clockListeners) listener();
-  }, 10_000);
-
-  return () => {
-    clockListeners.delete(onChange);
-    if (clockListeners.size === 0 && clockTimer) {
-      clearInterval(clockTimer);
-      clockTimer = null;
-    }
-  };
-}
 
 /**
  * Shows who is signed in and offers the way out. Signed out it is a plain
@@ -163,12 +135,9 @@ function AccountMenu() {
 }
 
 function Clock() {
-  const ms = useSyncExternalStore(
-    subscribeToClock,
-    () => clockNow,
-    () => 0, // sentinel for the server, where there is no clock to read
-  );
+  const ms = useClock();
 
+  // Zero is the server's sentinel, where there is no clock to read.
   if (ms === 0) return <span className="w-[104px]" aria-hidden />;
   const now = new Date(ms);
 

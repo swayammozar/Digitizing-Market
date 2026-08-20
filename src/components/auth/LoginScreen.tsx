@@ -4,22 +4,27 @@ import Image from "next/image";
 import { useState } from "react";
 import { continueAsGuest } from "@/lib/guest";
 import { createClient } from "@/lib/supabase/client";
+import { useBattery } from "@/lib/useBattery";
+import { useClock } from "@/lib/useClock";
 
 type Mode = "signin" | "signup";
+type Step = "email" | "password";
 
 /**
  * The macOS login screen, as the front door.
  *
- * Everything about it is the real thing — heavily blurred wallpaper, a round
- * avatar, the name beneath it, a capsule password field, and the power row
- * along the bottom — with one addition that is also genuinely macOS: Guest.
+ * One field at a time, the way Apple asks for an Apple ID: the email is
+ * confirmed, then the password appears in its place. A single capsule keeps the
+ * screen as quiet as the real thing, where there is only ever a password to
+ * type.
  *
- * Guest is what keeps this from costing sales. A shop nobody can see without
- * an account is a shop search engines cannot index and casual visitors do not
- * join, so the login screen is a first impression here rather than a gate.
+ * Guest sits underneath, which macOS also has. A shop nobody can see without an
+ * account is a shop search engines cannot index and casual visitors do not
+ * join, so this is a first impression rather than a gate.
  */
 export default function LoginScreen() {
   const [mode, setMode] = useState<Mode>("signin");
+  const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -27,12 +32,27 @@ export default function LoginScreen() {
   const [notice, setNotice] = useState<string | null>(null);
   const [asleep, setAsleep] = useState(false);
 
+  const reset = (next: Mode) => {
+    setMode(next);
+    setStep("email");
+    setPassword("");
+    setError(null);
+    setNotice(null);
+  };
+
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-    setBusy(true);
     setError(null);
     setNotice(null);
 
+    // The email step only advances; nothing is sent until there is a password
+    // to send with it.
+    if (step === "email") {
+      setStep("password");
+      return;
+    }
+
+    setBusy(true);
     const supabase = createClient();
 
     if (mode === "signup") {
@@ -47,10 +67,10 @@ export default function LoginScreen() {
       }
       if (!data.session) {
         setNotice("Check your email to confirm your account, then sign in.");
-        setMode("signin");
+        reset("signin");
       }
-      // A session means Supabase signed them straight in, and useSession
-      // swaps this screen for the desktop on its own.
+      // A session means Supabase signed them straight in, and Shell swaps this
+      // screen for the desktop on its own.
       return;
     }
 
@@ -62,9 +82,10 @@ export default function LoginScreen() {
     if (signInError) {
       setError(
         signInError.message === "Invalid login credentials"
-          ? "That email and password do not match an account."
+          ? "That password is not right for this account."
           : signInError.message,
       );
+      setPassword("");
     }
   };
 
@@ -84,55 +105,53 @@ export default function LoginScreen() {
   return (
     <main className="fixed inset-0 flex flex-col items-center justify-center overflow-hidden px-6">
       <Backdrop />
+      <StatusBar />
 
-      <div className="flex w-full max-w-[280px] flex-col items-center">
-        <span className="grid h-[104px] w-[104px] place-items-center overflow-hidden rounded-full bg-white/85 shadow-[0_6px_24px_rgba(0,0,0,.35)] ring-1 ring-white/40">
-          <Image
-            src="/ui/custom.png"
-            alt=""
-            width={128}
-            height={128}
-            priority
-            className="h-[74%] w-[74%] object-contain [filter:invert(18%)_sepia(64%)_saturate(3200%)_hue-rotate(340deg)]"
-          />
-        </span>
+      <div className="flex w-full max-w-[264px] flex-col items-center">
+        <Avatar />
 
-        <h1 className="desktop-label mt-3.5 text-[19px] font-semibold tracking-tight text-white">
+        <h1 className="desktop-label mt-3.5 text-[18px] font-semibold tracking-tight text-white">
           Digitizing Market
         </h1>
-        <p className="desktop-label mt-1 text-center text-[12.5px] text-white/70">
-          {mode === "signin"
-            ? "Sign in for your designs, or look around as a guest"
-            : "Create an account to keep your designs"}
+
+        <p className="desktop-label mt-1 h-[16px] text-center text-[12.5px] text-white/70">
+          {step === "password" ? email : mode === "signin" ? "Sign in" : "Create an account"}
         </p>
 
-        <form onSubmit={submit} className="mt-5 w-full space-y-2">
-          <input
-            type="email"
-            required
-            autoComplete="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="login-field"
-          />
-
+        <form onSubmit={submit} className="mt-4 w-full">
           <div className="relative">
-            <input
-              type="password"
-              required
-              minLength={8}
-              autoComplete={mode === "signin" ? "current-password" : "new-password"}
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="login-field pr-10"
-            />
+            {step === "email" ? (
+              <input
+                key="email"
+                type="email"
+                required
+                autoFocus
+                autoComplete="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="login-field pr-10"
+              />
+            ) : (
+              <input
+                key="password"
+                type="password"
+                required
+                autoFocus
+                minLength={8}
+                autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="login-field pr-10"
+              />
+            )}
+
             <button
               type="submit"
               disabled={busy}
-              aria-label={mode === "signin" ? "Sign in" : "Create account"}
-              className="absolute right-1 top-1 grid h-[30px] w-[30px] place-items-center rounded-full bg-white/25 text-white transition-colors hover:bg-white/40 disabled:opacity-50"
+              aria-label={step === "email" ? "Continue" : "Sign in"}
+              className="absolute right-1 top-1 grid h-[30px] w-[30px] place-items-center rounded-full bg-white/25 text-white transition-colors hover:bg-white/45 disabled:opacity-50"
             >
               {busy ? (
                 <span className="block h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white" />
@@ -152,35 +171,41 @@ export default function LoginScreen() {
           </div>
         </form>
 
-        {error && (
-          <p
-            role="alert"
-            className="mt-2.5 rounded-lg bg-black/45 px-3 py-1.5 text-center text-[12px] text-white"
-          >
-            {error}
-          </p>
-        )}
-        {notice && (
-          <p className="mt-2.5 rounded-lg bg-black/45 px-3 py-1.5 text-center text-[12px] text-white">
-            {notice}
-          </p>
-        )}
+        <div className="mt-2.5 h-[30px] w-full">
+          {error && (
+            <p
+              role="alert"
+              className="rounded-lg bg-black/50 px-3 py-1.5 text-center text-[12px] text-white"
+            >
+              {error}
+            </p>
+          )}
+          {notice && (
+            <p className="rounded-lg bg-black/50 px-3 py-1.5 text-center text-[12px] text-white">
+              {notice}
+            </p>
+          )}
+        </div>
 
         <button
           type="button"
-          onClick={() => {
-            setMode(mode === "signin" ? "signup" : "signin");
-            setError(null);
-            setNotice(null);
-          }}
-          className="desktop-label mt-3 text-[12.5px] text-white/80 underline-offset-2 hover:underline"
+          onClick={() =>
+            step === "password"
+              ? reset(mode)
+              : reset(mode === "signin" ? "signup" : "signin")
+          }
+          className="desktop-label text-[12.5px] text-white/80 underline-offset-2 hover:underline"
         >
-          {mode === "signin" ? "Create an account" : "I already have an account"}
+          {step === "password"
+            ? "Use a different email"
+            : mode === "signin"
+              ? "Create an account"
+              : "I already have an account"}
         </button>
 
         <div className="mt-6 flex w-full items-center gap-3" aria-hidden>
           <span className="h-px flex-1 bg-white/25" />
-          <span className="desktop-label text-[11px] uppercase tracking-wider text-white/60">
+          <span className="desktop-label text-[11px] uppercase tracking-wider text-white/55">
             or
           </span>
           <span className="h-px flex-1 bg-white/25" />
@@ -227,6 +252,103 @@ export default function LoginScreen() {
         </PowerButton>
       </div>
     </main>
+  );
+}
+
+/**
+ * Black disc, white mark. The spool is the shop's own, so the login screen
+ * says which machine you are sitting at — but reduced to two colours, because
+ * an avatar competing with the wallpaper is the one thing this screen cannot
+ * afford.
+ */
+function Avatar() {
+  return (
+    <span className="grid h-[96px] w-[96px] place-items-center overflow-hidden rounded-full bg-[#121212] shadow-[0_8px_28px_rgba(0,0,0,.45)] ring-1 ring-white/25">
+      <Image
+        src="/ui/custom.png"
+        alt=""
+        width={128}
+        height={128}
+        priority
+        className="h-[64%] w-[64%] object-contain"
+      />
+    </span>
+  );
+}
+
+/** The menu bar as it appears before login: status only, no menus. */
+function StatusBar() {
+  const ms = useClock();
+  const battery = useBattery();
+
+  return (
+    <div className="absolute inset-x-0 top-0 flex h-7 items-center justify-end gap-3 px-4 text-white">
+      <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden>
+        <path
+          d="M3.5 9.5a13 13 0 0 1 17 0M6.5 13a8.5 8.5 0 0 1 11 0M9.5 16.4a4 4 0 0 1 5 0"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinecap="round"
+          fill="none"
+        />
+        <circle cx="12" cy="19.4" r="1.15" fill="currentColor" />
+      </svg>
+
+      <span
+        className="flex items-center gap-1"
+        aria-label={
+          battery.known ? `Battery ${Math.round(battery.level * 100)} percent` : "Battery"
+        }
+      >
+        {battery.known && (
+          <span className="tabular text-[12px] font-medium">
+            {Math.round(battery.level * 100)}%
+          </span>
+        )}
+        <svg width="25" height="13" viewBox="0 0 25 13" aria-hidden>
+          <rect
+            x="0.75"
+            y="0.75"
+            width="20"
+            height="11.5"
+            rx="3.4"
+            stroke="currentColor"
+            strokeOpacity="0.55"
+            strokeWidth="1.1"
+            fill="none"
+          />
+          <path
+            d="M22.4 4.4v4.2a2.2 2.2 0 0 0 0-4.2z"
+            fill="currentColor"
+            fillOpacity="0.55"
+          />
+          <rect
+            x="2.3"
+            y="2.3"
+            width={Math.max(2, 17 * battery.level)}
+            height="8.4"
+            rx="2"
+            fill={battery.charging || battery.level > 0.2 ? "currentColor" : "#ff5f57"}
+          />
+        </svg>
+      </span>
+
+      {/* Empty on the server, where the visitor's clock is not knowable. */}
+      {ms > 0 && (
+        <span className="tabular text-[12.5px] font-medium">
+          {new Date(ms).toLocaleDateString("en-US", {
+            weekday: "short",
+            day: "numeric",
+            month: "short",
+          })}
+          {"  "}
+          {new Date(ms).toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+          })}
+        </span>
+      )}
+    </div>
   );
 }
 
