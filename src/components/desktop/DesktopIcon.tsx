@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { clampIcon, useIconPositions } from "@/lib/desktopIcons";
+import { capturePointer } from "@/lib/pointer";
 
 /** Pointer travel before a press counts as a drag rather than a click. */
 const DRAG_THRESHOLD = 4;
@@ -61,7 +62,7 @@ export default function DesktopIcon({
       originY: (position.y / 100) * window.innerHeight,
       moved: false,
     };
-    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    capturePointer(e.currentTarget as HTMLElement, e.pointerId);
   };
 
   const onPointerMove = useCallback(

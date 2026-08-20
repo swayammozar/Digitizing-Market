@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useWindows, WINDOW_CHROME, type WindowState } from "@/lib/windows";
+import { capturePointer } from "@/lib/pointer";
 
 const MIN_WIDTH = 420;
 const MIN_HEIGHT = 320;
@@ -39,7 +40,7 @@ export default function WindowFrame({ win, subtitle, toolbar, children }: Props)
       dx: e.clientX - win.x,
       dy: e.clientY - win.y,
     };
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    capturePointer(e.currentTarget as HTMLElement, e.pointerId);
     setInteracting(true);
   };
 
@@ -53,7 +54,7 @@ export default function WindowFrame({ win, subtitle, toolbar, children }: Props)
       width: win.width,
       height: win.height,
     };
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    capturePointer(e.currentTarget as HTMLElement, e.pointerId);
     setInteracting(true);
   };
 
