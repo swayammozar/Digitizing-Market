@@ -7,6 +7,7 @@ import {
   loadScript,
   paypalSdkUrl,
 } from "@/lib/checkout";
+import { cleanToken } from "@/lib/env";
 
 interface PayPalButtonsApi {
   Buttons: (config: Record<string, unknown>) => {
@@ -20,8 +21,13 @@ declare global {
   }
 }
 
-/** Inlined at build time, so it is a constant rather than component state. */
-const CLIENT_ID = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
+/**
+ * Inlined at build time, so it is a constant rather than component state.
+ * Cleaned because it is typed into a hosting dashboard by hand: a stray
+ * newline here makes the SDK URL invalid, and the failure surfaces as a
+ * connection error rather than anything pointing at the id.
+ */
+const CLIENT_ID = cleanToken(process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID);
 
 /**
  * PayPal insists on rendering its own button — it opens a popup, and a popup

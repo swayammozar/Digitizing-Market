@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "check:pricing": "tsx scripts/check-pricing.mts",
+    "check:env": "tsx scripts/check-env-cleaning.mts",
     "catalog": "node scripts/build-catalog.mjs",
     "icons": "node scripts/prepare-icons.mjs",
     "media": "node scripts/process-media.mjs",

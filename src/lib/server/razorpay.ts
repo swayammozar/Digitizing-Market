@@ -2,6 +2,7 @@ import "server-only";
 
 import crypto from "node:crypto";
 import { CheckoutError } from "@/lib/pricing";
+import { cleanEnv, cleanToken } from "@/lib/env";
 
 /**
  * Razorpay Orders, over fetch. The npm SDK wraps the same two REST calls.
@@ -15,8 +16,8 @@ import { CheckoutError } from "@/lib/pricing";
 const HOST = "https://api.razorpay.com/v1";
 
 function config() {
-  const keyId = process.env.RAZORPAY_KEY_ID;
-  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+  const keyId = cleanToken(process.env.RAZORPAY_KEY_ID);
+  const keySecret = cleanEnv(process.env.RAZORPAY_KEY_SECRET);
   if (!keyId || !keySecret) {
     throw new CheckoutError("Razorpay is not configured on this deployment.", 503);
   }

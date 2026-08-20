@@ -1,4 +1,5 @@
 import raw from "@/data/products.json";
+import { cleanEnv } from "./env";
 import type { Catalog, Currency, Product } from "./types";
 
 const catalog = raw as Catalog;
@@ -34,8 +35,7 @@ export const categoryCounts: Record<string, number> = Object.fromEntries(
  * host and nothing looks wrong at build time — but the value interpolated into
  * an `src` keeps the whitespace and every image silently fails to load.
  */
-const MEDIA_BASE = (process.env.NEXT_PUBLIC_MEDIA_BASE_URL ?? "/media")
-  .trim()
+const MEDIA_BASE = (cleanEnv(process.env.NEXT_PUBLIC_MEDIA_BASE_URL) ?? "/media")
   .replace(/\/+$/, "");
 
 export function mediaUrl(key: string): string {

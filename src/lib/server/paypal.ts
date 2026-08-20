@@ -1,6 +1,7 @@
 import "server-only";
 
 import { CheckoutError } from "@/lib/pricing";
+import { cleanEnv, cleanToken } from "@/lib/env";
 
 /**
  * PayPal Orders v2, over plain fetch rather than an SDK — we use three
@@ -16,12 +17,15 @@ const HOSTS = {
 };
 
 function config() {
-  const clientId = process.env.PAYPAL_CLIENT_ID;
-  const secret = process.env.PAYPAL_CLIENT_SECRET;
+  // Cleaned for the same reason the client id is: these are pasted into a
+  // dashboard, and a trailing newline inside a Basic auth header produces an
+  // authentication failure that looks like wrong credentials.
+  const clientId = cleanToken(process.env.PAYPAL_CLIENT_ID);
+  const secret = cleanEnv(process.env.PAYPAL_CLIENT_SECRET);
   if (!clientId || !secret) {
     throw new CheckoutError("PayPal is not configured on this deployment.", 503);
   }
-  const env = process.env.PAYPAL_ENV === "live" ? "live" : "sandbox";
+  const env = cleanEnv(process.env.PAYPAL_ENV) === "live" ? "live" : "sandbox";
   return { clientId, secret, host: HOSTS[env] };
 }
 
