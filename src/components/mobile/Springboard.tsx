@@ -113,14 +113,19 @@ export default function Springboard() {
 
       <StatusBar />
 
-      <header className="flex shrink-0 items-center justify-between px-5 pb-1 pt-1.5">
+      {/* Centred as a pair, the way a home screen's date widget sits — the shop
+          name and the currency it is priced in belong together. */}
+      <header className="flex shrink-0 items-center justify-center gap-2.5 px-5 pb-1 pt-1.5">
         <span className="desktop-label text-[15px] font-semibold text-white">
           Digitizing Market
         </span>
         <button
           type="button"
           onClick={() => setCurrency(currency === "USD" ? "INR" : "USD")}
-          className="desktop-label tabular rounded-full bg-black/20 px-2.5 py-1 text-[12px] font-medium text-white"
+          aria-label={
+            currency === "USD" ? "Prices in dollars, switch to rupees" : "Prices in rupees, switch to dollars"
+          }
+          className="desktop-label tabular rounded-full bg-black/25 px-2.5 py-1 text-[12px] font-medium text-white"
         >
           {currency === "USD" ? "$ USD" : "₹ INR"}
         </button>
@@ -149,9 +154,13 @@ export default function Springboard() {
                   label="Help"
                   onOpen={() => setSheet({ kind: "help" })}
                   tile={
-                    <span className="grid h-full w-full place-items-center rounded-[22%] bg-white/85">
-                      <span className="text-[26px] font-semibold text-[#5a43e8]">?</span>
-                    </span>
+                    <Image
+                      src="/ui/settings.png"
+                      alt=""
+                      width={256}
+                      height={256}
+                      className="h-full w-full rounded-[22%] object-cover"
+                    />
                   }
                 />
               ) : (

@@ -43,6 +43,7 @@ const APP = path.join(ROOT, "src", "app");
 const ICONS = [
   { from: "instagram icon.png", to: path.join(OUT, "instagram.png"), mode: "tile" },
   { from: "custom icon.png", to: path.join(OUT, "custom.png"), mode: "glyph" },
+  { from: "apple-settings.png", to: path.join(OUT, "settings.png"), mode: "tile" },
   { from: "custom icon.png", to: path.join(APP, "icon.png"), mode: "favicon", size: 512 },
   {
     from: "custom icon.png",
