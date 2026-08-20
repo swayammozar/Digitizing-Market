@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useCart, useCartHydrated } from "@/lib/cart";
+import { createClient } from "@/lib/supabase/client";
+import { useSession } from "@/lib/useSession";
 import { useWindows } from "@/lib/windows";
 import type { Currency } from "@/lib/types";
 
@@ -76,6 +78,88 @@ function subscribeToClock(onChange: () => void) {
       clockTimer = null;
     }
   };
+}
+
+/**
+ * Shows who is signed in and offers the way out. Signed out it is a plain
+ * shortcut into the library, which is where the sign-in form lives — there is
+ * no separate login screen to send anyone to.
+ */
+function AccountMenu() {
+  const { user, ready } = useSession();
+  const [open, setOpen] = useState(false);
+  const openWindow = useWindows((s) => s.open);
+
+  if (!ready) return null;
+
+  if (!user) {
+    return (
+      <button
+        type="button"
+        onClick={() =>
+          openWindow({ kind: "downloads", target: "downloads", title: "My Downloads" })
+        }
+        className="rounded px-2 py-0.5 font-medium transition-colors hover:bg-white/15"
+      >
+        Sign in
+      </button>
+    );
+  }
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        className={`grid h-[19px] w-[19px] place-items-center rounded-full bg-white/25 text-[10px] font-bold uppercase transition-colors hover:bg-white/40 ${
+          open ? "bg-white/40" : ""
+        }`}
+        title={user.email ?? "Account"}
+      >
+        {(user.email ?? "?").charAt(0)}
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          className="glass glass-thick animate-window-open absolute right-0 top-[calc(100%+6px)] min-w-[220px] overflow-hidden rounded-[10px] p-1.5"
+        >
+          <p className="truncate px-2.5 py-1.5 text-[12px] text-[color:var(--label-on-panel-secondary)]">
+            {user.email}
+          </p>
+          <div className="my-1 h-px bg-black/10" />
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              openWindow({
+                kind: "downloads",
+                target: "downloads",
+                title: "My Downloads",
+              });
+            }}
+            className="w-full rounded-md px-2.5 py-1.5 text-left text-[13px] text-[color:var(--label-on-panel)] transition-colors hover:bg-[color:var(--color-system-blue)] hover:text-white"
+          >
+            My Downloads
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={async () => {
+              setOpen(false);
+              await createClient().auth.signOut();
+            }}
+            className="w-full rounded-md px-2.5 py-1.5 text-left text-[13px] text-[color:var(--label-on-panel)] transition-colors hover:bg-[color:var(--color-system-blue)] hover:text-white"
+          >
+            Sign out
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function Clock() {
@@ -224,6 +308,7 @@ export default function MenuBar() {
           )}
         </button>
 
+        <AccountMenu />
         <Clock />
       </div>
     </div>

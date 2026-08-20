@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { bySlug, formatPrice, mediaUrl, price } from "@/lib/catalog";
 import { useCart } from "@/lib/cart";
 import { capturePointer } from "@/lib/pointer";
+import Checkout from "../checkout/Checkout";
+import DownloadsLibrary from "../downloads/DownloadsLibrary";
 import ProductDetail from "../product/ProductDetail";
 
 export type SheetTarget =
@@ -150,16 +152,16 @@ function Content({
     return <ProductDetail product={product} onAdded={() => onNavigate({ kind: "cart" })} />;
   }
 
-  if (target.kind === "cart") return <MobileCart onClose={onClose} />;
-
-  if (target.kind === "downloads") {
+  if (target.kind === "cart") {
     return (
-      <Message
-        title="Sign in to see your designs"
-        body="Every design you buy stays here, and you can download it again as many times as you like — new machine, new computer, years later."
+      <MobileCart
+        onClose={onClose}
+        onPaid={() => onNavigate({ kind: "downloads" })}
       />
     );
   }
+
+  if (target.kind === "downloads") return <DownloadsLibrary />;
 
   if (target.kind === "service") {
     return (
@@ -173,7 +175,13 @@ function Content({
   return <MobileHelp />;
 }
 
-function MobileCart({ onClose }: { onClose: () => void }) {
+function MobileCart({
+  onClose,
+  onPaid,
+}: {
+  onClose: () => void;
+  onPaid: () => void;
+}) {
   const slugs = useCart((s) => s.items);
   const remove = useCart((s) => s.remove);
   const currency = useCart((s) => s.currency);
@@ -235,19 +243,8 @@ function MobileCart({ onClose }: { onClose: () => void }) {
         ))}
       </ul>
 
-      <div className="sticky bottom-0 border-t border-black/10 bg-white/70 p-4">
-        <div className="mb-3 flex items-baseline justify-between">
-          <span className="text-[13px] text-[color:var(--label-on-panel-secondary)]">Total</span>
-          <span className="tabular text-[20px] font-semibold text-[color:var(--label-on-panel)]">
-            {formatPrice(total, currency)}
-          </span>
-        </div>
-        <button
-          type="button"
-          className="w-full rounded-lg bg-[color:var(--color-hanko)] px-4 py-3 text-[15px] font-semibold text-white"
-        >
-          Check out
-        </button>
+      <div className="sticky bottom-0 bg-white/70">
+        <Checkout total={total} currency={currency} onPaid={onPaid} />
       </div>
     </div>
   );

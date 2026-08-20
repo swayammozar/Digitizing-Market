@@ -4,6 +4,7 @@ import Image from "next/image";
 import { bySlug, formatPrice, mediaUrl, price } from "@/lib/catalog";
 import { useCart } from "@/lib/cart";
 import { useWindows, type WindowState } from "@/lib/windows";
+import Checkout from "../checkout/Checkout";
 import WindowFrame from "./WindowFrame";
 
 export default function CartWindow({ win }: { win: WindowState }) {
@@ -100,24 +101,18 @@ export default function CartWindow({ win }: { win: WindowState }) {
               ))}
             </ul>
 
-            <div className="shrink-0 border-t border-black/10 bg-white/40 p-4">
-              <div className="mb-3 flex items-baseline justify-between">
-                <span className="text-[13px] text-[color:var(--label-on-panel-secondary)]">
-                  Total
-                </span>
-                <span className="tabular text-[20px] font-semibold text-[color:var(--label-on-panel)]">
-                  {formatPrice(total, currency)}
-                </span>
-              </div>
-              <button
-                type="button"
-                className="w-full rounded-lg bg-[color:var(--color-hanko)] px-4 py-2.5 text-[14px] font-semibold text-white transition-[filter,transform] hover:brightness-110 active:scale-[.99]"
-              >
-                Check out
-              </button>
-              <p className="mt-2.5 text-center text-[11.5px] text-[color:var(--label-on-panel-secondary)]">
-                Files are yours to download the moment payment clears.
-              </p>
+            <div className="shrink-0">
+              <Checkout
+                total={total}
+                currency={currency}
+                onPaid={() =>
+                  open({
+                    kind: "downloads",
+                    target: "downloads",
+                    title: "My Downloads",
+                  })
+                }
+              />
             </div>
           </>
         )}
