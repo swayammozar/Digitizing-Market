@@ -262,7 +262,7 @@ const HELP = [
   },
   {
     q: "Talk to a person",
-    a: "hello@digitizingmarket.com — you will hear back within a day.",
+    a: "swayam.mozar@gmail.com — you will hear back within a day.",
   },
 ];
 

@@ -129,7 +129,7 @@ const PAGES: Record<string, Page> = {
     subtitle: "Talk to a person",
     blocks: [
       {
-        body: `Questions about a design, a machine that will not cooperate, or custom work — email hello@digitizingmarket.com and you will hear back within a day.`,
+        body: `Questions about a design, a machine that will not cooperate, or custom work — email swayam.mozar@gmail.com and you will hear back within a day.`,
       },
       {
         heading: "Custom digitizing",

@@ -110,7 +110,7 @@ export async function POST(request: Request) {
     if (error) {
       console.error("custom request insert failed", error);
       return NextResponse.json(
-        { error: "The request could not be saved. Please email hello@digitizingmarket.com." },
+        { error: "The request could not be saved. Please email swayam.mozar@gmail.com." },
         { status: 500 },
       );
     }
@@ -119,7 +119,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("custom-request", error);
     return NextResponse.json(
-      { error: "Something went wrong. Please email hello@digitizingmarket.com." },
+      { error: "Something went wrong. Please email swayam.mozar@gmail.com." },
       { status: 500 },
     );
   }

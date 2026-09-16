@@ -7,6 +7,7 @@ import { useIsMobile } from "@/lib/useIsMobile";
 import { useWindows } from "@/lib/windows";
 import Springboard from "../mobile/Springboard";
 import DesktopIcon from "./DesktopIcon";
+import DesktopFooter from "./DesktopFooter";
 import MenuBar from "./MenuBar";
 import Dock from "./Dock";
 import WindowLayer from "../window/WindowLayer";
@@ -75,6 +76,7 @@ export default function Desktop() {
       </div>
 
       <WindowLayer />
+      <DesktopFooter />
       <Dock />
     </main>
   );
