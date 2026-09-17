@@ -276,6 +276,40 @@ async function checkDeployment() {
     }
   }
 
+  /**
+   * "RAZORPAY_WEBHOOK_SECRET is set" above only reads the local file. It said
+   * ok while production rejected every genuine webhook, because the deployed
+   * value was read without cleaning and carried a pasted newline — two copies
+   * of the same secret that no longer agreed.
+   *
+   * The only proof is to ask production. A webhook signed with the local secret
+   * for an event the handler deliberately ignores is accepted if and only if
+   * both sides hold the same key, and grants nothing either way.
+   */
+  const webhookSecret = cleanEnv(process.env.RAZORPAY_WEBHOOK_SECRET);
+  if (webhookSecret) {
+    const { createHmac } = await import("node:crypto");
+    const body = JSON.stringify({ event: "order.paid", payload: {} });
+    const signature = createHmac("sha256", webhookSecret).update(body).digest("hex");
+    const status = await fetch(`${SITE}/api/webhooks/razorpay`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-razorpay-signature": signature },
+      body,
+    })
+      .then((r) => r.status)
+      .catch(() => 0);
+
+    if (status === 200) {
+      pass("Production accepts a correctly signed Razorpay webhook");
+    } else {
+      fail(
+        `Production rejected a correctly signed Razorpay webhook (${status})`,
+        "The deployed RAZORPAY_WEBHOOK_SECRET differs from the local one. " +
+          "Every real payment webhook is being refused.",
+      );
+    }
+  }
+
   for (const hook of ["paypal", "razorpay"]) {
     const status = await fetch(`${SITE}/api/webhooks/${hook}`, {
       method: "POST",

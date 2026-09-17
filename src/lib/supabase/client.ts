@@ -1,6 +1,7 @@
 "use client";
 
 import { createBrowserClient } from "@supabase/ssr";
+import { cleanEnv } from "@/lib/env";
 
 /**
  * Supabase for the browser. Uses the publishable (anon) key, which is safe to
@@ -9,7 +10,7 @@ import { createBrowserClient } from "@supabase/ssr";
  */
 export function createClient() {
   return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_URL)!,
+    cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)!,
   );
 }

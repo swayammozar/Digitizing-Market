@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { cleanEnv } from "@/lib/env";
 
 /**
  * Refreshes the Supabase session on every request and writes the rotated
@@ -11,8 +12,8 @@ import { NextResponse, type NextRequest } from "next/server";
 export async function proxy(request: NextRequest) {
   const response = NextResponse.next({ request });
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const url = cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const key = cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
   // The catalog, cart and product windows all work without Supabase, so a
   // deployment without credentials should still serve the shop rather than

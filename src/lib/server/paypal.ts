@@ -191,7 +191,9 @@ export async function verifyPayPalWebhook(params: {
   headers: Headers;
   rawBody: string;
 }): Promise<boolean> {
-  const webhookId = process.env.PAYPAL_WEBHOOK_ID;
+  // Cleaned: PayPal verifies the signature against this exact id, and a pasted
+  // trailing newline makes it a different id that PayPal has never heard of.
+  const webhookId = cleanToken(process.env.PAYPAL_WEBHOOK_ID);
   if (!webhookId) return false;
 
   const required = [

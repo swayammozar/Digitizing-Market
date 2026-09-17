@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
+import { cleanEnv } from "@/lib/env";
 
 /**
  * Supabase for server components and route handlers, carrying the visitor's
@@ -10,8 +11,8 @@ export async function createClient() {
   const cookieStore = await cookies();
 
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_URL)!,
+    cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)!,
     {
       cookies: {
         getAll: () => cookieStore.getAll(),
@@ -39,7 +40,7 @@ export async function createClient() {
  * component — the key must not reach the browser.
  */
 export function createAdminClient() {
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const key = cleanEnv(process.env.SUPABASE_SERVICE_ROLE_KEY);
   if (!key) {
     throw new Error(
       "SUPABASE_SERVICE_ROLE_KEY is not set. Payment verification and " +
@@ -47,7 +48,7 @@ export function createAdminClient() {
     );
   }
 
-  return createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, key, {
+  return createSupabaseClient(cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_URL)!, key, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 }

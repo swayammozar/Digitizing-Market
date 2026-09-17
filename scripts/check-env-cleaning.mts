@@ -8,6 +8,9 @@
  *
  *   npx tsx scripts/check-env-cleaning.mts
  */
+import fs from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { cleanEnv, cleanToken } from "../src/lib/env.js";
 
 let failures = 0;
@@ -46,6 +49,49 @@ check(
   cleanEnv("\thttps://x.supabase.co/storage/v1"),
   "https://x.supabase.co/storage/v1",
 );
+
+/**
+ * The cleaning functions above were correct the whole time. What broke the
+ * webhooks was a read that never called them: the fix for pasted credentials
+ * cleaned the API keys and missed both webhook values, so every genuine
+ * delivery was rejected as forged while every test here still passed.
+ *
+ * So this also checks usage, not just behaviour — every environment read in
+ * the app must go through cleanEnv or cleanToken.
+ */
+console.log("\nevery environment read is cleaned");
+
+const SRC = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "src");
+
+async function sourceFiles(dir: string): Promise<string[]> {
+  const out: string[] = [];
+  for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) out.push(...(await sourceFiles(full)));
+    else if (/\.(ts|tsx)$/.test(entry.name)) out.push(full);
+  }
+  return out;
+}
+
+const raw: string[] = [];
+for (const file of await sourceFiles(SRC)) {
+  // env.ts defines the cleaners and legitimately has nothing to wrap.
+  if (file.endsWith(`${path.sep}env.ts`)) continue;
+  const lines = (await fs.readFile(file, "utf8")).split("\n");
+  lines.forEach((line, i) => {
+    if (!line.includes("process.env.")) return;
+    if (/clean(Env|Token)\(\s*process\.env\./.test(line)) return;
+    raw.push(`${path.relative(SRC, file)}:${i + 1}  ${line.trim()}`);
+  });
+}
+
+if (raw.length === 0) {
+  console.log("  ok    no raw process.env reads");
+} else {
+  failures += 1;
+  console.log(`  FAIL  ${raw.length} read(s) bypass cleaning:`);
+  for (const r of raw) console.log(`        ${r}`);
+}
 
 console.log(failures === 0 ? "\nall passed" : `\n${failures} failed`);
 process.exit(failures === 0 ? 0 : 1);

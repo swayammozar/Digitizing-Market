@@ -117,7 +117,10 @@ export function verifyRazorpayWebhook(params: {
   rawBody: string;
   signature: string | null;
 }): boolean {
-  const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+  // Cleaned like every other pasted credential. This one was missed when the
+  // rest were fixed, and a trailing newline in an HMAC key produces an entirely
+  // different digest — every genuine webhook was rejected as forged.
+  const secret = cleanEnv(process.env.RAZORPAY_WEBHOOK_SECRET);
   if (!secret || !params.signature) return false;
 
   const expected = crypto
